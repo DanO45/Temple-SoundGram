@@ -1,7 +1,13 @@
 package edu.temple.soundgram;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -42,7 +48,6 @@ public class MainActivity extends Activity {
 	int RECORD_AUDIO_REQUEST_CODE = 11111112;
 	
 	File photo, audio;
-	
 	LinearLayout ll;
 	
 	
@@ -73,6 +78,13 @@ public class MainActivity extends Activity {
 		
 		
 		ll = (LinearLayout) findViewById(R.id.imageLinearLayout);
+		
+		File storageDirectory = new File(Environment.getExternalStorageDirectory().toString() + "/" + getString(R.string.audio_directory));
+		
+		if (!storageDirectory.exists()) 
+		{
+			storageDirectory.mkdir();
+        }
 		
 		loadStream();
 	}
@@ -249,10 +261,86 @@ public class MainActivity extends Activity {
 			@Override
 			public void onClick(View v) {
 				MediaPlayer mPlayer = new MediaPlayer();
+				
 		        try {
-		            mPlayer.setDataSource(soundgramObject.getString("audio_url"));
-		            mPlayer.prepare();
-		            mPlayer.start();
+		        	File storageDirectory = new File(Environment.getExternalStorageDirectory() + "/" + getString(R.string.audio_directory));
+		       
+		        	Uri uri = Uri.parse(soundgramObject.getString("audio_url"));
+		        	final String audioFileName = uri.getQueryParameter("filename") + ".mp3";
+		        	final File tempfile = new File(storageDirectory, audioFileName);
+		        	
+		        	Thread downloadThread = new Thread(){
+		        		@Override
+		        		public void run (){
+		        			try{
+		        				URL url = new URL(soundgramObject.getString("audio_url").toString());
+		        				BufferedInputStream input = new BufferedInputStream(url.openStream());
+		        				FileOutputStream output = new FileOutputStream(tempfile);
+		        				BufferedOutputStream bufferedout = new BufferedOutputStream(output,1024);
+
+		        				byte[] audioData = new byte[1024];
+
+		        				int x = 0;
+
+		        				while((x = input.read(audioData,0,1024)) >= 0)
+		        				{
+		        					bufferedout.write(audioData,0,x);               
+		        				}
+		        				
+		        				output.flush();
+		        	            bufferedout.flush();
+		        	            output.close();
+		        	            bufferedout.close();
+		        	            input.close();
+		        			}
+		        			
+		        			catch(Exception e)
+		        			{
+		        				e.printStackTrace();
+		        			}
+		        			
+		        		}
+		        	};
+		        	
+		        	
+		        	
+		        	File[] fileArray = storageDirectory.listFiles();
+		        	File targetFile = null;
+		        	
+		        	for(int i = 0; i < fileArray.length; i++)
+		        	{
+		        		if (audioFileName.equals(fileArray[i].getName().toString()))
+		        		{
+		        			targetFile = fileArray[i];
+		        			System.out.println("Got to this point");
+		        			break;
+		        		}
+		        		
+		        		else
+		        		{
+		        			continue;
+		        		}
+		        	}
+		        	
+		        	if (targetFile != null)
+		        	{
+		        		mPlayer.setDataSource(storageDirectory.toString() + "/" + targetFile.getName().toString());
+		        		System.out.println("I hope this is working!!!");
+        	        	mPlayer.prepare();
+    		            mPlayer.start();	
+		        	}
+		        	
+		        	else
+		        	{
+		        		downloadThread.start();
+		        		
+		        		mPlayer.setDataSource(tempfile.getName().toString());
+		        		System.out.println("First Download");
+			            mPlayer.prepare();
+			            mPlayer.start();
+		        	}
+		        	
+		            
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -271,14 +359,3 @@ public class MainActivity extends Activity {
 	}
 	
 }
-
-
-
-
-
-
-
-
-
-
-

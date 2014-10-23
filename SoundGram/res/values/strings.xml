@@ -3,5 +3,7 @@
 
     <string name="app_name">SoundGram</string>
     <string name="hello_world">Hello world!</string>
+    <string name="audio_directory">AudioClips</string>
+    <string name="cache_folder">AudioClips</string>
 
 </resources>
